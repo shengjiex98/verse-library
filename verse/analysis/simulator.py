@@ -23,7 +23,6 @@ from verse.analysis.incremental import (
 )
 from verse.map.lane_map import LaneMap
 from verse.parser.parser import ModePath, find, unparse
-from verse.scenario import ScenarioConfig
 from verse.sensor import BaseSensor
 from verse.utils.utils import dedup
 
@@ -194,7 +193,8 @@ class Simulator:
 
     @staticmethod
     def simulate_one(
-        config: ScenarioConfig,
+        # Scenario config, not sure what's the best way to type hint without cyclic imports.
+        config,
         cached_segments: Dict[str, CachedSegment],
         node: AnalysisTreeNode,
         old_node_id: Optional[Tuple[int, int]],
