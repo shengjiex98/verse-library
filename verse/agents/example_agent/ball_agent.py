@@ -3,7 +3,7 @@
 import plotly.graph_objects as go
 
 from verse import BaseAgent
-from verse.plotter.plotter2D import go, simulation_tree
+from verse.plotter.plotter2D import simulation_tree
 
 
 class BallAgent(BaseAgent):
