@@ -1,15 +1,23 @@
-from typing import Tuple, List, Dict
 import copy
+import timeit
 from dataclasses import dataclass
-import numpy as np
+from typing import Dict, List, Tuple
+
+from pympler import asizeof
 
 from verse.agents.base_agent import BaseAgent
-from verse.analysis import Simulator, Verifier, AnalysisTreeNode, AnalysisTree, ReachabilityMethod
+from verse.analysis import (
+    AnalysisTree,
+    AnalysisTreeNode,
+    ReachabilityMethod,
+    Simulator,
+    Verifier,
+)
 from verse.analysis.analysis_tree import AnalysisTreeNodeType
-from verse.utils.utils import sample_rect
+from verse.map.lane_map import LaneMap
 from verse.parser.parser import ControllerIR
 from verse.sensor.base_sensor import BaseSensor
-from verse.map.lane_map import LaneMap
+from verse.utils.utils import sample_rect
 
 EGO, OTHERS = "ego", "others"
 
@@ -174,8 +182,9 @@ class Scenario:
         assert (
             len(uncertain_param_list) == len(self.agent_dict) or len(uncertain_param_list) == 0
         ), "the length of uncertain_param_list not fit the number of agents or equal to 0"
-        print(init_mode_list)
-        print(type(init_mode_list))
+        if self.config.print_level >= 1:
+            print(init_mode_list)
+            print(type(init_mode_list))
         if not static_list:
             static_list = [[] for i in range(0, len(self.agent_dict))]
             # print(static_list)
@@ -398,10 +407,6 @@ class ExprConfig:
         print("plot", self.plot)
         print("dump", self.dump)
         print("sim", self.sim)
-
-
-from pympler import asizeof
-import timeit
 
 
 class Benchmark:
