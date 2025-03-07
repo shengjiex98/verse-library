@@ -1,34 +1,34 @@
-from dataclasses import dataclass
-import pickle
-import timeit
-from typing import Dict, List, Optional, Tuple
-import copy, itertools, functools, pprint
-from pympler.asizeof import asizeof
-from collections import defaultdict
-from typing import DefaultDict, Optional, Tuple, List, Dict, Any
-from types import SimpleNamespace
-import warnings
-import types
+import copy
+import functools
+import itertools
+import pprint
 import sys
+import timeit
+import types
+import warnings
+from collections import defaultdict
+from dataclasses import dataclass
 from enum import Enum
+from types import SimpleNamespace
+from typing import Any, DefaultDict, Dict, List, Optional, Tuple
 
 from verse.agents.base_agent import BaseAgent
-from verse.analysis.incremental import CachedSegment, SimTraceCache, convert_sim_trans, to_simulate
-from verse.utils.utils import dedup
+from verse.analysis.analysis_tree import AnalysisTree, AnalysisTreeNode, TraceType
+from verse.analysis.incremental import (
+    CachedSegment,
+    SimTraceCache,
+    convert_sim_trans,
+    sim_trans_suit,
+    to_simulate,
+)
 from verse.map.lane_map import LaneMap
 from verse.parser.parser import ModePath, find, unparse
-from verse.analysis.incremental import (
-    CachedRTTrans,
-    CachedSegment,
-    combine_all,
-    reach_trans_suit,
-    sim_trans_suit,
-)
+from verse.scenario import ScenarioConfig
+from verse.sensor import BaseSensor
+from verse.utils.utils import dedup
 
 pp = functools.partial(pprint.pprint, compact=True, width=130)
 
-# from verse.agents.base_agent import BaseAgent
-from verse.analysis.analysis_tree import AnalysisTreeNode, AnalysisTree, TraceType
 
 PathDiffs = List[Tuple[BaseAgent, ModePath]]
 
@@ -177,7 +177,7 @@ class SimConsts:
     lane_map: LaneMap
     run_num: int
     past_runs: List[AnalysisTree]
-    sensor: "BaseSensor"
+    sensor: BaseSensor
     agent_dict: Dict
 
 
@@ -194,7 +194,7 @@ class Simulator:
 
     @staticmethod
     def simulate_one(
-        config: "ScenarioConfig",
+        config: ScenarioConfig,
         cached_segments: Dict[str, CachedSegment],
         node: AnalysisTreeNode,
         old_node_id: Optional[Tuple[int, int]],
@@ -225,12 +225,12 @@ class Simulator:
         # TODO: for now, make sure all the segments comes from the same node; maybe we can do
         # something to combine results from different nodes in the future
         new_cache, paths_to_sim = {}, []
-        if old_node_id != None:
+        if old_node_id is not None:
             if old_node_id[0] != consts.run_num:
                 old_node = find(
                     consts.past_runs[old_node_id[0]].nodes, lambda n: n.id == old_node_id[1]
                 )
-                assert old_node != None
+                assert old_node is not None
                 new_cache, paths_to_sim = to_simulate(old_node.agent, node.agent, cached_segments)
 
         asserts, transitions, transition_idx = Simulator.get_transition_simulate(
@@ -239,7 +239,7 @@ class Simulator:
         node.assert_hits = asserts
         
         # pp(("transitions:", transition_idx, transitions))
-        if not config.unsafe_continue and asserts != None:
+        if not config.unsafe_continue and asserts is not None:
             idx = transition_idx
             for agent in node.agent:
                 node.trace[agent] = node.trace[agent][:idx]
@@ -262,7 +262,7 @@ class Simulator:
                 truncated_trace[agent_idx] = node.trace[agent_idx][transition_idx:]
                 node.trace[agent_idx] = node.trace[agent_idx][: transition_idx + 1]
 
-        if asserts != None:  # FIXME
+        if asserts is not None:  # FIXME
             return (node.id, later, [], node.trace, cache_updates)
             # print(transition_idx)
             # pp({a: len(t) for a, t in node.trace.items()})
@@ -377,7 +377,7 @@ class Simulator:
                 )
                 self.num_cached += 1
             else:
-                assert cached != None
+                assert cached is not None
                 cached.transitions.extend(
                     convert_sim_trans(
                         aid, transit_agents, done_node.init, transition, transition_idx
@@ -401,7 +401,7 @@ class Simulator:
         past_runs,
     ):
         # Setup the root of the simulation tree
-        if max_height == None:
+        if max_height is None:
             max_height = float("inf")
 
         self.simulation_queue: List[Tuple[AnalysisTreeNode, int]] = [(root, 0)]
@@ -435,12 +435,12 @@ class Simulator:
                     if self.config.incremental:
                         # pp(("check hit", agent_id, mode, init))
                         cached = self.cache.check_hit(agent_id, mode, init, node.init)
-                        if cached != None:
+                        if cached is not None:
                             self.cache_hits = self.cache_hits[0] + 1, self.cache_hits[1]
                         else:
                             self.cache_hits = self.cache_hits[0], self.cache_hits[1] + 1
-                        # pp(("check hit res", agent_id, len(cached.transitions) if cached != None else None))
-                        if cached != None:
+                        # pp(("check hit res", agent_id, len(cached.transitions) if cached is not None else None))
+                        if cached is not None:
                             cached_segments[agent_id] = cached
                 old_node_id = None
                 if len(cached_segments) == len(node.agent):
@@ -450,7 +450,7 @@ class Simulator:
                         old_node_id = node_ids[0]
                     # else:
                     #     print(f"not full {node.id}: {node_ids}, {len(cached_segments) == len(node.agent)} | {all_node_ids}")
-                if not self.config.parallel or old_node_id != None:
+                if not self.config.parallel or old_node_id is not None:
                     # print(f"local {node.id}")
                     t = timeit.default_timer()
                     self.proc_result(
@@ -505,7 +505,7 @@ class Simulator:
         past_runs,
     ):
         # Setup the root of the simulation tree
-        if max_height == None:
+        if max_height is None:
             max_height = float("inf")
 
         simulation_queue = []
@@ -559,7 +559,7 @@ class Simulator:
                     truncated_trace[agent_idx] = node.trace[agent_idx][transition_idx:]
                     node.trace[agent_idx] = node.trace[agent_idx][: transition_idx + 1]
 
-            if asserts != None:
+            if asserts is not None:
                 pass
                 # print(transition_idx)
                 # pp({a: len(t) for a, t in node.trace.items()})
@@ -707,7 +707,7 @@ class Simulator:
         transitions = defaultdict(list)
         # TODO: We can probably rewrite how guard hit are detected and resets are handled for simulation
         for idx in range(trace_length):
-            if min_trans_ind != None and idx >= min_trans_ind:
+            if min_trans_ind is not None and idx >= min_trans_ind:
                 return None, dict(cached_trans), min_trans_ind
             satisfied_guard = []
             all_asserts = defaultdict(list)
@@ -734,7 +734,7 @@ class Simulator:
                     agent_state,
                     agent_mode,
                 )
-                if asserts != None:
+                if asserts is not None:
                     all_asserts[agent_id] = asserts
                     continue
                 if len(satisfied) != 0:
