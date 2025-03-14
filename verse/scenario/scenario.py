@@ -112,8 +112,13 @@ class Scenario:
             self.static_dict[agent.id] = copy.deepcopy(agent.static_parameters)
         else:
             self.static_dict[agent.id] = []
-        if hasattr(agent, "uncertain_parameters") and agent.uncertain_parameters is not None:
-            self.uncertain_param_dict[agent.id] = copy.deepcopy(agent.uncertain_parameters)
+        if (
+            hasattr(agent, "uncertain_parameters")
+            and agent.uncertain_parameters is not None
+        ):
+            self.uncertain_param_dict[agent.id] = copy.deepcopy(
+                agent.uncertain_parameters
+            )
         else:
             self.uncertain_param_dict[agent.id] = []
 
@@ -141,11 +146,15 @@ class Scenario:
             for i in init:
                 assert len(i) == len(
                     list(agent.decision_logic.state_defs.values())[0].cont
-                ), "the length of element in init not fit the number of continuous variables"
+                ), (
+                    "the length of element in init not fit the number of continuous variables"
+                )
             # print(agent.decision_logic.mode_defs)
             assert len(init_mode) == len(
                 list(agent.decision_logic.state_defs.values())[0].disc
-            ), "the length of element in init_mode not fit the number of discrete variables"
+            ), (
+                "the length of element in init_mode not fit the number of discrete variables"
+            )
         if len(init) == 1:
             init = init + init
         self.init_dict[agent_id] = copy.deepcopy(init)
@@ -163,25 +172,31 @@ class Scenario:
             self.uncertain_param_dict[agent_id] = []
         return
 
-    '''
+    """
     overload this function to work for star sets -- not a priority, behind technical aspects if this is complex
     currently, star sets need to be initialized using set_initial on agents
-    '''
-    def set_init(self, init_list, init_mode_list, static_list=[], uncertain_param_list=[]):
+    """
+
+    def set_init(
+        self, init_list, init_mode_list, static_list=[], uncertain_param_list=[]
+    ):
         """Sets the initial conditions for all agents. The order will be the same as the order in
         which the agents are added."""
-        assert len(init_list) == len(
-            self.agent_dict
-        ), "the length of init_list not fit the number of agents"
-        assert len(init_mode_list) == len(
-            self.agent_dict
-        ), "the length of init_mode_list not fit the number of agents"
+        assert len(init_list) == len(self.agent_dict), (
+            "the length of init_list not fit the number of agents"
+        )
+        assert len(init_mode_list) == len(self.agent_dict), (
+            "the length of init_mode_list not fit the number of agents"
+        )
+        assert len(static_list) == len(self.agent_dict) or len(static_list) == 0, (
+            "the length of static_list not fit the number of agents or equal to 0"
+        )
         assert (
-            len(static_list) == len(self.agent_dict) or len(static_list) == 0
-        ), "the length of static_list not fit the number of agents or equal to 0"
-        assert (
-            len(uncertain_param_list) == len(self.agent_dict) or len(uncertain_param_list) == 0
-        ), "the length of uncertain_param_list not fit the number of agents or equal to 0"
+            len(uncertain_param_list) == len(self.agent_dict)
+            or len(uncertain_param_list) == 0
+        ), (
+            "the length of uncertain_param_list not fit the number of agents or equal to 0"
+        )
         if self.config.print_level >= 1:
             print(init_mode_list)
             print(type(init_mode_list))
@@ -193,60 +208,91 @@ class Scenario:
             # print(uncertain_param_list)
         for i, agent_id in enumerate(self.agent_dict.keys()):
             self.set_init_single(
-                agent_id, init_list[i], init_mode_list[i], static_list[i], uncertain_param_list[i]
+                agent_id,
+                init_list[i],
+                init_mode_list[i],
+                static_list[i],
+                uncertain_param_list[i],
             )
 
     def _check_init(self):
         for agent_id in self.agent_dict.keys():
-            assert agent_id in self.init_dict, "init of {} not initialized".format(agent_id)
-            assert agent_id in self.init_mode_dict, "init_mode of {} not initialized".format(
+            assert agent_id in self.init_dict, "init of {} not initialized".format(
                 agent_id
             )
-            assert agent_id in self.static_dict, "static of {} not initialized".format(agent_id)
-            assert (
-                agent_id in self.uncertain_param_dict
-            ), "uncertain_param of {} not initialized".format(agent_id)
+            assert agent_id in self.init_mode_dict, (
+                "init_mode of {} not initialized".format(agent_id)
+            )
+            assert agent_id in self.static_dict, "static of {} not initialized".format(
+                agent_id
+            )
+            assert agent_id in self.uncertain_param_dict, (
+                "uncertain_param of {} not initialized".format(agent_id)
+            )
         return
 
     def _get_init_from_agent(self):
         for agent_id in self.agent_dict.keys():
             if agent_id not in self.init_dict:
                 agent = self.agent_dict[agent_id]
-                if hasattr(agent, "init_cont") and agent.init_cont is not None and \
-                  hasattr(agent, "init_disc") and agent.init_disc is not None:
-                    init_cont = agent.init_cont 
+                if (
+                    hasattr(agent, "init_cont")
+                    and agent.init_cont is not None
+                    and hasattr(agent, "init_disc")
+                    and agent.init_disc is not None
+                ):
+                    init_cont = agent.init_cont
                     init_disc = agent.init_disc
                     static_parameters = []
-                    if hasattr(agent, "static_parameters") and agent.static_parameters is not None:
+                    if (
+                        hasattr(agent, "static_parameters")
+                        and agent.static_parameters is not None
+                    ):
                         static_parameters = agent.static_parameters
                     uncertain_parameters = []
-                    if hasattr(agent, "uncertain_parameters") and agent.uncertain_parameters is not None:
+                    if (
+                        hasattr(agent, "uncertain_parameters")
+                        and agent.uncertain_parameters is not None
+                    ):
                         uncertain_parameters = agent.uncertain_parameters
-                    self.set_init_single(agent_id, init_cont, init_disc, static_parameters, uncertain_parameters)
+                    self.set_init_single(
+                        agent_id,
+                        init_cont,
+                        init_disc,
+                        static_parameters,
+                        uncertain_parameters,
+                    )
 
-    def simulate(self, time_horizon, time_step, max_height=None, seed=None) -> AnalysisTree:
-        '''Computes a single simulation trace of a scenario, starting from a single initial state.
-            Parameters:
+    def simulate(
+        self, time_horizon, time_step, max_height=None, seed=None
+    ) -> AnalysisTree:
+        """Computes a single simulation trace of a scenario, starting from a single initial state.
+        Parameters:
 
-                time_horizon (float): Time limit of simulation. Positive float.
-                time_step (float): delta, the sampling period for continuous evolution.
-                max_height (int): Maximum number of discrete transitions
-                seed (int): Seed for sampling initial state if a initial region is given.
+            time_horizon (float): Time limit of simulation. Positive float.
+            time_step (float): delta, the sampling period for continuous evolution.
+            max_height (int): Maximum number of discrete transitions
+            seed (int): Seed for sampling initial state if a initial region is given.
 
-            Result:
+        Result:
 
-                tree (AnalysisTree): Simulation tree contrining possibly multiple simulations   
-        '''
+            tree (AnalysisTree): Simulation tree contrining possibly multiple simulations
+        """
         _check_ray_init(self.config.parallel)
         self._get_init_from_agent()
         self._check_init()
         root = AnalysisTreeNode.root_from_inits(
             init={aid: sample_rect(init, seed) for aid, init in self.init_dict.items()},
             mode={
-                aid: tuple(elem if isinstance(elem, str) else elem.name for elem in modes)
+                aid: tuple(
+                    elem if isinstance(elem, str) else elem.name for elem in modes
+                )
                 for aid, modes in self.init_mode_dict.items()
             },
-            static={aid: [elem.name for elem in modes] for aid, modes in self.static_dict.items()},
+            static={
+                aid: [elem.name for elem in modes]
+                for aid, modes in self.static_dict.items()
+            },
             uncertain_param=self.uncertain_param_dict,
             agent=self.agent_dict,
             type=AnalysisTreeNodeType.SIM_TRACE,
@@ -265,27 +311,48 @@ class Scenario:
         self.past_runs.append(tree)
         return tree
 
-    def simulate_multi(self, time_horizon, time_step, init_dict_list=None, max_height=None, seed=None, n_sims=10):
-        '''Computes multiple simulation traces of a scenario, starting from multiple initial states.
-            `seed`: the random seed for sampling a point in the region specified by the initial
-            conditions
-        '''
+    def simulate_multi(
+        self,
+        time_horizon,
+        time_step,
+        init_dict_list=None,
+        max_height=None,
+        seed=None,
+        n_sims=10,
+    ):
+        """Computes multiple simulation traces of a scenario, starting from multiple initial states.
+        `seed`: the random seed for sampling a point in the region specified by the initial
+        conditions
+        """
         _check_ray_init(self.config.parallel)
         self._get_init_from_agent()
         self._check_init()
         tree_list = []
         if init_dict_list is None:
             for i in range(n_sims):
-                tree_list.append(self.simulate(time_horizon, time_step, max_height, seed))
+                tree_list.append(
+                    self.simulate(
+                        time_horizon,
+                        time_step,
+                        max_height,
+                        (seed + i) if seed is not None else None,
+                    )
+                )
         else:
             for init_dict in init_dict_list:
                 root = AnalysisTreeNode.root_from_inits(
                     init=init_dict,
                     mode={
-                        aid: tuple(elem if isinstance(elem, str) else elem.name for elem in modes)
+                        aid: tuple(
+                            elem if isinstance(elem, str) else elem.name
+                            for elem in modes
+                        )
                         for aid, modes in self.init_mode_dict.items()
                     },
-                    static={aid: [elem.name for elem in modes] for aid, modes in self.static_dict.items()},
+                    static={
+                        aid: [elem.name for elem in modes]
+                        for aid, modes in self.static_dict.items()
+                    },
                     uncertain_param=self.uncertain_param_dict,
                     agent=self.agent_dict,
                     type=AnalysisTreeNodeType.SIM_TRACE,
@@ -302,25 +369,32 @@ class Scenario:
                     self.past_runs,
                 )
                 self.past_runs.append(tree)
-                tree_list.append(tree)            
+                tree_list.append(tree)
         return tree_list
 
-    def simulate_simple(self, time_horizon, time_step, max_height=None, seed=None) -> AnalysisTree:
-        '''Computes a simulation trace of the scenario, starting from a single initial state. Evaluates the decision
-            logic code directly using Python interpreter (does not use the internal Verse parser and generate
-            nondeterministic transitions). Use the simulate() function for using the Verse interpreted decision logic.
-            `seed`: the random seed for sampling a point in the region specified by the initial
-            conditions
-        '''
+    def simulate_simple(
+        self, time_horizon, time_step, max_height=None, seed=None
+    ) -> AnalysisTree:
+        """Computes a simulation trace of the scenario, starting from a single initial state. Evaluates the decision
+        logic code directly using Python interpreter (does not use the internal Verse parser and generate
+        nondeterministic transitions). Use the simulate() function for using the Verse interpreted decision logic.
+        `seed`: the random seed for sampling a point in the region specified by the initial
+        conditions
+        """
         self._get_init_from_agent()
         self._check_init()
         root = AnalysisTreeNode.root_from_inits(
             init={aid: sample_rect(init, seed) for aid, init in self.init_dict.items()},
             mode={
-                aid: tuple(elem if isinstance(elem, str) else elem.name for elem in modes)
+                aid: tuple(
+                    elem if isinstance(elem, str) else elem.name for elem in modes
+                )
                 for aid, modes in self.init_mode_dict.items()
             },
-            static={aid: [elem.name for elem in modes] for aid, modes in self.static_dict.items()},
+            static={
+                aid: [elem.name for elem in modes]
+                for aid, modes in self.static_dict.items()
+            },
             uncertain_param=self.uncertain_param_dict,
             agent=self.agent_dict,
             type=AnalysisTreeNodeType.SIM_TRACE,
@@ -339,21 +413,28 @@ class Scenario:
         self.past_runs.append(tree)
         return tree
 
-    def verify(self, time_horizon, time_step, max_height=None, params={}) -> AnalysisTree:
-        '''Compute the set of reachable states, starting from a set of initial states states.'''
+    def verify(
+        self, time_horizon, time_step, max_height=None, params={}
+    ) -> AnalysisTree:
+        """Compute the set of reachable states, starting from a set of initial states states."""
         _check_ray_init(self.config.parallel)
         self._check_init()
         root = AnalysisTreeNode.root_from_inits(
             init={
-                #KB: todo: must fix this!!!
-                aid: [init] #[[init, init] if np.array(init).ndim < 2 else init]
+                # KB: todo: must fix this!!!
+                aid: [init]  # [[init, init] if np.array(init).ndim < 2 else init]
                 for aid, init in self.init_dict.items()
             },
             mode={
-                aid: tuple(elem if isinstance(elem, str) else elem.name for elem in modes)
+                aid: tuple(
+                    elem if isinstance(elem, str) else elem.name for elem in modes
+                )
                 for aid, modes in self.init_mode_dict.items()
             },
-            static={aid: [elem.name for elem in modes] for aid, modes in self.static_dict.items()},
+            static={
+                aid: [elem.name for elem in modes]
+                for aid, modes in self.static_dict.items()
+            },
             uncertain_param=self.uncertain_param_dict,
             agent=self.agent_dict,
             type=AnalysisTreeNodeType.REACH_TUBE,
@@ -471,9 +552,12 @@ class Benchmark:
             import ray
 
             parallel_time = (
-                sum(ev["dur"] for ev in ray.timeline() if ev["cname"] == "generic_work") / 1_000_000
+                sum(ev["dur"] for ev in ray.timeline() if ev["cname"] == "generic_work")
+                / 1_000_000
             )
-            self.parallelness = (parallel_time - self.parallel_time_offset) / self.run_time
+            self.parallelness = (
+                parallel_time - self.parallel_time_offset
+            ) / self.run_time
             self.parallel_time_offset = parallel_time
         return self.traces
 
@@ -487,7 +571,7 @@ class Benchmark:
             # arg = self.config.rest[0]
             # self.config.config = ScenarioConfig(incremental='i' in arg, parallel='l' in arg, **self.config.kw)
             # self.scenario.update_config(self.config.config)
-            self.replace_scenario(self.config.rest[1]) # TODO: Check if this is correct
+            self.replace_scenario(self.config.rest[1])  # TODO: Check if this is correct
             traces2 = self.run(*a, **kw)
         self.report()
         print("trace1 contains trace2?", traces1.contains(traces2))
