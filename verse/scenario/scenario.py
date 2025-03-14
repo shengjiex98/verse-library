@@ -318,7 +318,7 @@ class Scenario:
         init_dict_list=None,
         max_height=None,
         seed=None,
-        n_sims=10,
+        num_sims=10,
     ):
         """Computes multiple simulation traces of a scenario, starting from multiple initial states.
         `seed`: the random seed for sampling a point in the region specified by the initial
@@ -329,7 +329,7 @@ class Scenario:
         self._check_init()
         tree_list = []
         if init_dict_list is None:
-            for i in range(n_sims):
+            for i in range(num_sims):
                 tree_list.append(
                     self.simulate(
                         time_horizon,
